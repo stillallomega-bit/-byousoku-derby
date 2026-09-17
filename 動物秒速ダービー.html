@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>どうぶつ秒速ダービー</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --track-start: 7%;
+      --finish: 88%;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f3e8;
+      color: #222;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 8px 0 2px;
+      text-align: center;
+      font-size: 34px;
+      letter-spacing: 0.03em;
+    }
+
+    .catch {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .description {
+      background: #ffffff;
+      border: 3px solid #222;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      background: #ffffff;
+      border: 3px solid #222;
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .control-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    select {
+      border: 2px solid #222;
+      border-radius: 10px;
+      padding: 8px;
+      font-size: 15px;
+      background: #fff;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 4px 0;
+    }
+
+    .check-row input {
+      transform: scale(1.2);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      background: #fff;
+      border: 3px solid #222;
+      border-radius: 14px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0.75;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .race-area {
+      background: #85cf8f;
+      border: 4px solid #222;
+      border-radius: 18px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .ruler-caption {
+      margin-left: var(--track-start);
+      width: calc(var(--finish) - var(--track-start));
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 2px;
+    }
+
+    .distance-ruler {
+      position: relative;
+      margin-left: var(--track-start);
+      width: calc(var(--finish) - var(--track-start));
+      height: 36px;
+      background: rgba(255, 255, 255, 0.93);
+      border: 2px solid #222;
+      border-radius: 7px 7px 2px 2px;
+      overflow: visible;
+    }
+
+    .ruler-tick {
+      position: absolute;
+      bottom: 0;
+      width: 1px;
+      background: rgba(0, 0, 0, 0.42);
+      transform: translateX(-0.5px);
+      pointer-events: none;
+    }
+
+    .ruler-tick.minor {
+      height: 8px;
+    }
+
+    .ruler-tick.medium {
+      height: 14px;
+      width: 2px;
+      background: rgba(0, 0, 0, 0.58);
+    }
+
+    .ruler-tick.major {
+      height: 20px;
+      width: 2px;
+      background: #222;
+    }
+
+    .ruler-number {
+      position: absolute;
+      top: 1px;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .ruler-number.edge-left {
+      transform: translateX(0);
+    }
+
+    .ruler-number.edge-right {
+      transform: translateX(-100%);
+    }
+
+    .finish-line {
+      position: absolute;
+      top: 52px;
+      bottom: 0;
+      left: var(--finish);
+      width: 6px;
+      background: repeating-linear-gradient(
+        to bottom,
+        #fff 0,
+        #fff 12px,
+        #222 12px,
+        #222 24px
+      );
+      z-index: 5;
+    }
+
+    .goal-text {
+      position: absolute;
+      top: 56px;
+      left: calc(var(--finish) + 12px);
+      font-size: 13px;
+      font-weight: 900;
+      background: #fff;
+      border: 2px solid #222;
+      border-radius: 8px;
+      padding: 3px 6px;
+      z-index: 6;
+    }
+
+    .lane {
+      height: 92px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 2px solid rgba(0, 0, 0, 0.28);
+      border-radius: 14px;
+      margin: 12px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lane-grid {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: var(--track-start);
+      width: calc(var(--finish) - var(--track-start));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .grid-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .grid-line.medium {
+      width: 2px;
+      background: rgba(0, 0, 0, 0.13);
+    }
+
+    .grid-line.major {
+      width: 2px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .lane-info {
+      position: absolute;
+      left: 10px;
+      top: 7px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #222;
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-weight: 800;
+      z-index: 7;
+      max-width: calc(100% - 20px);
+    }
+
+    .racer-badge {
+      display: inline-flex;
+      width: 22px;
+      height: 22px;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #222;
+      border-radius: 50%;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 1000;
+      margin-right: 5px;
+      vertical-align: -1px;
+    }
+
+    .animal {
+      position: absolute;
+      top: 40px;
+      font-size: 38px;
+      z-index: 4;
+      transform: translateX(-50%) scaleX(-1);
+      transform-origin: center;
+      transition: none;
+      user-select: none;
+    }
+
+    .race-clock {
+      position: absolute;
+      right: 10px;
+      bottom: 7px;
+      z-index: 7;
+      background: rgba(255,255,255,0.94);
+      border: 2px solid #222;
+      border-radius: 10px;
+      padding: 3px 8px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      background: #fff;
+      border: 3px solid #222;
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.08s, background 0.08s;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .card.selected {
+      background: #ffe08a;
+      box-shadow: 0 0 0 4px rgba(255, 190, 40, 0.35);
+    }
+
+    .card.disabled {
+      cursor: not-allowed;
+      opacity: 0.75;
+    }
+
+    .card-id {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+    }
+
+    .big-icon {
+      font-size: 44px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .animal-name {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .card-detail {
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .friendly-extra {
+      display: block;
+      margin-top: 5px;
+      font-size: 13px;
+      font-weight: 800;
+      background: #eef8ff;
+      border-radius: 8px;
+      padding: 4px 6px;
+    }
+
+    .tie-card {
+      background: #f4f4f4;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 10px;
+    }
+
+    button {
+      border: 3px solid #222;
+      background: #fff;
+      border-radius: 13px;
+      padding: 11px 16px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .primary {
+      background: #ffcc4d;
+    }
+
+    .observe {
+      background: #dff2ff;
+    }
+
+    .danger {
+      background: #ffe0e0;
+    }
+
+    .time-free {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      margin: 2px 0 14px;
+    }
+
+    .result {
+      background: #fff;
+      border: 3px solid #222;
+      border-radius: 16px;
+      padding: 14px 16px;
+      min-height: 110px;
+      line-height: 1.75;
+      font-size: 16px;
+    }
+
+    .result strong {
+      font-weight: 900;
+    }
+
+    .formula {
+      background: #f1f1f1;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      padding: 10px;
+      margin-top: 10px;
+      white-space: pre-line;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .hint {
+      background: #fff6cf;
+      border: 2px solid #e2bd3e;
+      border-radius: 12px;
+      padding: 9px 10px;
+      margin-top: 10px;
+      font-weight: 700;
+    }
+
+    .comparison {
+      background: #eef8ff;
+      border: 2px solid #9bc7e6;
+      border-radius: 12px;
+      padding: 9px 10px;
+      margin-top: 10px;
+      font-weight: 700;
+    }
+
+    .small-note {
+      font-size: 13px;
+      opacity: 0.78;
+      margin-top: 6px;
+    }
+
+    .mode-note {
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 760px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      .catch {
+        font-size: 16px;
+      }
+
+      .lane-info {
+        font-size: 11px;
+      }
+
+      .animal {
+        font-size: 34px;
+      }
+
+      .ruler-number {
+        font-size: 8px;
+      }
+
+      .ruler-caption {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>どうぶつ秒速ダービー</h1>
+    <div class="catch">速い動物が勝つとは限らない。</div>
+
+    <div class="description">
+      スタート位置と秒速が違う動物たちを見て、先にゴールする動物を予想しよう。<br>
+      勝敗は運ではなく、<strong>残り距離 ÷ 秒速 = 到着時間</strong> で決まります。<br>
+      コースの目盛りと動物の位置は、実際の残り距離に合わせて正確に配置されます。
+    </div>
+
+    <div class="controls">
+      <div class="control-box">
+        <label for="difficulty">難易度</label>
+        <select id="difficulty">
+          <option value="easy">初級：割り切れる・2匹中心</option>
+          <option value="normal">中級：3匹・割り切れる</option>
+          <option value="hard">上級：小数あり・近い勝負</option>
+        </select>
+      </div>
+
+      <div class="control-box">
+        <label for="racerCount">動物の数</label>
+        <select id="racerCount">
+          <option value="2">2匹</option>
+          <option value="3">3匹</option>
+        </select>
+      </div>
+
+      <div class="control-box">
+        <label for="speedDisplayMode">速さの表示</label>
+        <select id="speedDisplayMode">
+          <option value="normal">通常：秒速2m</option>
+          <option value="friendly">やさしい：1秒で2mすすむ</option>
+        </select>
+      </div>
+
+      <div class="control-box">
+        <label for="raceSpeed">レースの再生速度</label>
+        <select id="raceSpeed">
+          <option value="0.5">0.5倍：ゆっくり</option>
+          <option value="1" selected>1倍：ふつう</option>
+          <option value="1.5">1.5倍</option>
+          <option value="2">2倍：はやい</option>
+        </select>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" id="assistMode" checked>
+        補助表示あり：計算式・ミス理由を表示
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="soundMode" checked>
+        効果音あり
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="speechMode">
+        音声読み上げを使う
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="divisibleMode" checked>
+        割り切れる問題にする
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="tieMode">
+        同着問題を出す
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="twistMode" checked>
+        ひっかけ問題を多めにする：速いだけ・近いだけでは勝てない
+      </label>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">正解数</div>
+        <div class="stat-value" id="correctCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">挑戦数</div>
+        <div class="stat-value" id="totalCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">正解率</div>
+        <div class="stat-value" id="accuracy">0%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">連続正解</div>
+        <div class="stat-value" id="streak">0</div>
+      </div>
+    </div>
+
+    <div class="race-area">
+      <div class="ruler-caption" id="rulerCaption">ゴールまでの残り距離</div>
+      <div class="distance-ruler" id="distanceRuler"></div>
+      <div class="finish-line"></div>
+      <div class="goal-text">GOAL</div>
+      <div id="lanes"></div>
+      <div class="race-clock" id="raceClock">0.0秒</div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="buttons">
+      <button id="readButton">🔊 問題を読み上げ</button>
+      <button class="primary" id="startButton" disabled>レース開始</button>
+      <button class="observe" id="stepButton" disabled>＋1秒進める</button>
+      <button id="pauseButton" disabled>一時停止</button>
+      <button id="replayButton" disabled>このレースをもう一度やる</button>
+      <button id="nextButton">次のレース</button>
+      <button class="danger" id="resetButton">成績リセット</button>
+    </div>
+
+    <div class="time-free">⏱ 予想には時間制限なし。好きなだけ考えてから選べます。</div>
+
+    <div class="result" id="result">
+      どの動物が先にゴールするか予想してね。
+    </div>
+  </div>
+
+  <script>
+    const animalPool = [
+      { name: "犬", icon: "🐕" },
+      { name: "チーター", icon: "🐆" },
+      { name: "うさぎ", icon: "🐇" },
+      { name: "かめ", icon: "🐢" },
+      { name: "ねこ", icon: "🐈" },
+      { name: "ペンギン", icon: "🐧" },
+      { name: "カンガルー", icon: "🦘" },
+      { name: "ひよこ", icon: "🐥" },
+      { name: "きつね", icon: "🦊" },
+      { name: "くま", icon: "🐻" }
+    ];
+
+    const soundFiles = {
+      tap: "sounds/tap.mp3",
+      correct: "sounds/correct.mp3",
+      wrong: "sounds/wrong.mp3"
+    };
+
+    const sounds = {};
+
+    const lanesEl = document.getElementById("lanes");
+    const cardsEl = document.getElementById("cards");
+    const resultEl = document.getElementById("result");
+    const distanceRulerEl = document.getElementById("distanceRuler");
+    const rulerCaptionEl = document.getElementById("rulerCaption");
+    const raceClockEl = document.getElementById("raceClock");
+
+    const difficultyEl = document.getElementById("difficulty");
+    const racerCountEl = document.getElementById("racerCount");
+    const speedDisplayModeEl = document.getElementById("speedDisplayMode");
+    const raceSpeedEl = document.getElementById("raceSpeed");
+    const assistModeEl = document.getElementById("assistMode");
+    const soundModeEl = document.getElementById("soundMode");
+    const speechModeEl = document.getElementById("speechMode");
+    const divisibleModeEl = document.getElementById("divisibleMode");
+    const tieModeEl = document.getElementById("tieMode");
+    const twistModeEl = document.getElementById("twistMode");
+
+    const readButton = document.getElementById("readButton");
+    const startButton = document.getElementById("startButton");
+    const stepButton = document.getElementById("stepButton");
+    const pauseButton = document.getElementById("pauseButton");
+    const replayButton = document.getElementById("replayButton");
+    const nextButton = document.getElementById("nextButton");
+    const resetButton = document.getElementById("resetButton");
+
+    const correctCountEl = document.getElementById("correctCount");
+    const totalCountEl = document.getElementById("totalCount");
+    const accuracyEl = document.getElementById("accuracy");
+    const streakEl = document.getElementById("streak");
+
+    let racers = [];
+    let selectedChoice = null;
+    let raceStarted = false;
+    let currentRaceFinished = false;
+    let lastResultIsCorrect = null;
+
+    let courseDistance = 40;
+    let simulationTime = 0;
+    let animationFrameId = null;
+    let lastFrameTime = null;
+    let isPaused = false;
+    let isStepMode = false;
+    let scoreThisRun = true;
+    let replaying = false;
+    let sameRacePractice = false;
+
+    let stats = {
+      correct: 0,
+      total: 0,
+      streak: 0,
+      bestStreak: 0
+    };
+
+    const FINISH_PERCENT = 88;
+    const TRACK_START_PERCENT = 7;
+    const REAL_MS_PER_SIM_SECOND = 450;
+
+    function setupSounds() {
+      for (const key in soundFiles) {
+        const audio = new Audio(soundFiles[key]);
+        audio.preload = "auto";
+        audio.volume = 0.42;
+        sounds[key] = audio;
+      }
+
+      if (sounds.tap) sounds.tap.volume = 0.32;
+      if (sounds.correct) sounds.correct.volume = 0.46;
+      if (sounds.wrong) sounds.wrong.volume = 0.28;
+    }
+
+    function playSound(name) {
+      if (!soundModeEl.checked) return;
+      if (!sounds[name]) return;
+
+      try {
+        const audio = sounds[name];
+        audio.pause();
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } catch (error) {
+        console.log("音声再生エラー:", error);
+      }
+    }
+
+    function speak(text) {
+      if (!speechModeEl.checked) {
+        resultEl.innerHTML = `
+          音声読み上げを使う場合は、上の「音声読み上げを使う」にチェックを入れてね。
+        `;
+        return;
+      }
+
+      if (!("speechSynthesis" in window)) {
+        resultEl.innerHTML = "このブラウザは音声読み上げに対応していません。";
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "ja-JP";
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function getRacerLabel(index) {
+      return String.fromCharCode(65 + index);
+    }
+
+    function getRemainingDistance(racer, time = simulationTime) {
+      return Math.max(0, racer.distance - racer.speed * time);
+    }
+
+    function getProblemSpeechText() {
+      const lines = racers.map((racer, index) => {
+        const remaining = formatRemainingDistance(getRemainingDistance(racer));
+        return `${getRacerLabel(index)}、${racer.name}。残り${remaining}メートル。1秒で${racer.speed}メートル進みます。`;
+      });
+
+      return `どの動物が先にゴールするか予想してください。${lines.join(" ")} 予想には時間制限はありません。`;
+    }
+
+    function getResultSpeechText() {
+      const winners = getWinners();
+      const isTie = winners.length >= 2;
+      const winnerText = winners.map(w => w.name).join("と");
+
+      let text = isTie
+        ? `結果は${winnerText}の同着でした。`
+        : `勝ったのは${winnerText}です。`;
+
+      racers.forEach(racer => {
+        text += `${racer.name}は${formatTime(racer.time)}でゴール。`;
+      });
+
+      return text;
+    }
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function shuffle(array) {
+      return [...array].sort(() => Math.random() - 0.5);
+    }
+
+    function formatTime(time) {
+      if (Math.abs(time - Math.round(time)) < 0.001) {
+        return `${Math.round(time)}秒`;
+      }
+      return `${time.toFixed(2)}秒`;
+    }
+
+    function getSpeedText(speed) {
+      if (speedDisplayModeEl.value === "friendly") {
+        return `1秒で${speed}mすすむ`;
+      }
+
+      return `秒速${speed}m`;
+    }
+
+    function getSpeedFormulaText(speed) {
+      return `${speed}m/秒`;
+    }
+
+    function getSpeedModeMessage() {
+      if (speedDisplayModeEl.value === "friendly") {
+        return "やさしい表示：速さを「1秒で何mすすむか」で表示します。";
+      }
+
+      return "通常表示：速さを「秒速○m」で表示します。";
+    }
+
+    function getSpeedList(difficulty) {
+      if (difficulty === "easy") {
+        return [2, 3, 4, 5, 6];
+      }
+
+      if (difficulty === "normal") {
+        return [2, 3, 4, 5, 6, 8, 10];
+      }
+
+      return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+
+    function getTimeRange(difficulty) {
+      if (difficulty === "easy") {
+        return { min: 4, max: 8 };
+      }
+
+      if (difficulty === "normal") {
+        return { min: 4, max: 10 };
+      }
+
+      return { min: 4, max: 13 };
+    }
+
+    function getRaceSettings() {
+      return {
+        difficulty: difficultyEl.value,
+        racerCount: Number(racerCountEl.value),
+        assistMode: assistModeEl.checked,
+        divisibleMode: divisibleModeEl.checked,
+        tieMode: tieModeEl.checked,
+        twistMode: twistModeEl.checked
+      };
+    }
+
+    function getWinners() {
+      const minTime = Math.min(...racers.map(racer => racer.time));
+      return racers.filter(racer => Math.abs(racer.time - minTime) < 0.001);
+    }
+
+    function chooseCourseDistance(raceData) {
+      const maxDistance = Math.max(...raceData.map(r => r.distance));
+      return Math.max(40, Math.ceil(maxDistance / 10) * 10);
+    }
+
+    function remainingDistanceToLeft(distance) {
+      const usableWidth = FINISH_PERCENT - TRACK_START_PERCENT;
+      const ratio = distance / courseDistance;
+      return FINISH_PERCENT - ratio * usableWidth;
+    }
+
+    function applyStartPositions(raceData) {
+      courseDistance = chooseCourseDistance(raceData);
+
+      return raceData.map(racer => ({
+        ...racer,
+        startLeft: remainingDistanceToLeft(racer.distance)
+      }));
+    }
+
+    function renderRuler() {
+      distanceRulerEl.innerHTML = "";
+      rulerCaptionEl.textContent = `ゴールまでの残り距離（このコースは${courseDistance}m）`;
+
+      const labelStep = courseDistance <= 80 ? 10 : 20;
+
+      for (let remaining = 0; remaining <= courseDistance; remaining++) {
+        const left = 100 - (remaining / courseDistance) * 100;
+
+        const tick = document.createElement("div");
+        tick.className = "ruler-tick";
+
+        if (remaining % 10 === 0) {
+          tick.classList.add("major");
+        } else if (remaining % 5 === 0) {
+          tick.classList.add("medium");
+        } else {
+          tick.classList.add("minor");
+        }
+
+        tick.style.left = `${left}%`;
+        distanceRulerEl.appendChild(tick);
+
+        if (remaining % labelStep === 0 || remaining === courseDistance || remaining === 0) {
+          const number = document.createElement("div");
+          number.className = "ruler-number";
+          number.textContent = remaining === 0 ? "0m" : `${remaining}m`;
+          number.style.left = `${left}%`;
+
+          if (left <= 0.01) number.classList.add("edge-left");
+          if (left >= 99.99) number.classList.add("edge-right");
+
+          distanceRulerEl.appendChild(number);
+        }
+      }
+    }
+
+    function addLaneGrid(lane) {
+      const grid = document.createElement("div");
+      grid.className = "lane-grid";
+
+      for (let remaining = 0; remaining <= courseDistance; remaining++) {
+        const line = document.createElement("div");
+        line.className = "grid-line";
+
+        if (remaining % 10 === 0) {
+          line.classList.add("major");
+        } else if (remaining % 5 === 0) {
+          line.classList.add("medium");
+        }
+
+        const left = 100 - (remaining / courseDistance) * 100;
+        line.style.left = `${left}%`;
+        grid.appendChild(line);
+      }
+
+      lane.appendChild(grid);
+    }
+
+    function hasFastestAnimalLosing(raceData) {
+      const minTime = Math.min(...raceData.map(r => r.time));
+      const winners = raceData.filter(r => Math.abs(r.time - minTime) < 0.001);
+
+      if (winners.length !== 1) return true;
+
+      const winner = winners[0];
+      const maxSpeed = Math.max(...raceData.map(r => r.speed));
+      const fastestAnimals = raceData.filter(r => r.speed === maxSpeed);
+
+      return !fastestAnimals.some(r => r.index === winner.index);
+    }
+
+    function hasClosestAnimalLosing(raceData) {
+      const minTime = Math.min(...raceData.map(r => r.time));
+      const winners = raceData.filter(r => Math.abs(r.time - minTime) < 0.001);
+
+      if (winners.length !== 1) return true;
+
+      const winner = winners[0];
+      const minDistance = Math.min(...raceData.map(r => r.distance));
+      const closestAnimals = raceData.filter(r => Math.abs(r.distance - minDistance) < 0.001);
+
+      return !closestAnimals.some(r => r.index === winner.index);
+    }
+
+    function pickTwistTarget() {
+      const roll = Math.random();
+
+      if (roll < 0.45) {
+        return "closestLoses";
+      }
+
+      if (roll < 0.75) {
+        return "fastestLoses";
+      }
+
+      return "any";
+    }
+
+    function hasSafeTimeDifference(raceData, difficulty) {
+      const times = raceData.map(r => r.time).sort((a, b) => a - b);
+
+      for (let i = 0; i < times.length - 1; i++) {
+        const diff = Math.abs(times[i + 1] - times[i]);
+
+        if (diff < 0.25) {
+          return false;
+        }
+
+        if (difficulty === "easy" && diff < 1) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function makeIntegerTimeRace(settings, pickedAnimals, wantTie) {
+      const speeds = getSpeedList(settings.difficulty);
+      const { min, max } = getTimeRange(settings.difficulty);
+      const count = settings.racerCount;
+
+      let times = [];
+
+      if (wantTie && count >= 2) {
+        const winTime = randInt(min, Math.max(min, max - 2));
+        const tieSlots = shuffle([...Array(count).keys()]).slice(0, 2);
+
+        for (let i = 0; i < count; i++) {
+          if (tieSlots.includes(i)) {
+            times.push(winTime);
+          } else {
+            times.push(randInt(winTime + 1, max + 3));
+          }
+        }
+      } else {
+        const timeSet = new Set();
+
+        while (timeSet.size < count) {
+          timeSet.add(randInt(min, max));
+        }
+
+        times = shuffle([...timeSet]);
+      }
+
+      return pickedAnimals.map((animal, index) => {
+        const speed = randomChoice(speeds);
+        const time = times[index];
+        const distance = speed * time;
+
+        return {
+          ...animal,
+          index,
+          speed,
+          distance,
+          time
+        };
+      });
+    }
+
+    function makeDecimalRace(settings, pickedAnimals) {
+      const speeds = getSpeedList(settings.difficulty);
+
+      return pickedAnimals.map((animal, index) => {
+        const speed = randomChoice(speeds);
+        const distance = settings.difficulty === "hard"
+          ? randInt(18, 95)
+          : randInt(15, 80);
+
+        const time = distance / speed;
+
+        return {
+          ...animal,
+          index,
+          speed,
+          distance,
+          time
+        };
+      });
+    }
+
+    function createRaceData() {
+      const settings = getRaceSettings();
+      const pickedAnimals = shuffle(animalPool).slice(0, settings.racerCount);
+      const twistTarget = settings.twistMode ? pickTwistTarget() : "any";
+
+      for (let attempt = 0; attempt < 420; attempt++) {
+        const tieChance =
+          settings.difficulty === "easy" ? 0.1 :
+          settings.difficulty === "normal" ? 0.22 :
+          0.3;
+
+        const wantTie = settings.tieMode && Math.random() < tieChance;
+
+        let raceData;
+
+        if (settings.divisibleMode || wantTie) {
+          raceData = makeIntegerTimeRace(settings, pickedAnimals, wantTie);
+        } else {
+          raceData = makeDecimalRace(settings, pickedAnimals);
+        }
+
+        const minTime = Math.min(...raceData.map(r => r.time));
+        const winners = raceData.filter(r => Math.abs(r.time - minTime) < 0.001);
+        const isTie = winners.length >= 2;
+
+        if (!settings.tieMode && isTie) {
+          continue;
+        }
+
+        if (!isTie && !hasSafeTimeDifference(raceData, settings.difficulty)) {
+          continue;
+        }
+
+        if (settings.twistMode && !isTie && attempt < 260) {
+          if (twistTarget === "closestLoses" && !hasClosestAnimalLosing(raceData)) {
+            continue;
+          }
+
+          if (twistTarget === "fastestLoses" && !hasFastestAnimalLosing(raceData)) {
+            continue;
+          }
+        }
+
+        return applyStartPositions(raceData);
+      }
+
+      const fallback = makeIntegerTimeRace(settings, pickedAnimals, false);
+      return applyStartPositions(fallback);
+    }
+
+    function stopAnimation() {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      lastFrameTime = null;
+    }
+
+    function resetPlaybackState() {
+      stopAnimation();
+      simulationTime = 0;
+      isPaused = false;
+      isStepMode = false;
+      scoreThisRun = true;
+      replaying = false;
+      raceClockEl.textContent = "0.0秒";
+      pauseButton.textContent = "一時停止";
+      pauseButton.disabled = true;
+      replayButton.disabled = true;
+    }
+
+    function makeRace() {
+      stopAnimation();
+
+      racers = createRaceData();
+      sameRacePractice = false;
+      selectedChoice = null;
+      raceStarted = false;
+      currentRaceFinished = false;
+      lastResultIsCorrect = null;
+
+      resetPlaybackState();
+
+      startButton.disabled = true;
+      stepButton.disabled = true;
+
+      renderRuler();
+      renderRace();
+      renderCards();
+
+      resultEl.innerHTML = `
+        どの動物が先にゴールするか予想してね。
+        <div class="small-note">
+          ヒント：到着時間は「残り距離 ÷ 速さ」で求められます。
+        </div>
+        <div class="mode-note">
+          📏 目盛りは実際の距離に対応しています。動物の中心が、その残り距離の位置です。
+        </div>
+      `;
+    }
+
+    function renderRace() {
+      lanesEl.innerHTML = "";
+
+      racers.forEach((racer, index) => {
+        const lane = document.createElement("div");
+        lane.className = "lane";
+
+        addLaneGrid(lane);
+
+        const info = document.createElement("div");
+        info.className = "lane-info";
+        info.id = `lane-info-${index}`;
+        info.innerHTML = `
+          <span class="racer-badge">${getRacerLabel(index)}</span>
+          ${racer.name}：残り${racer.distance}m / ${getSpeedText(racer.speed)}
+        `;
+        lane.appendChild(info);
+
+        const animal = document.createElement("div");
+        animal.className = "animal";
+        animal.id = `animal-${index}`;
+        animal.style.left = `${racer.startLeft}%`;
+        animal.textContent = racer.icon;
+        animal.setAttribute(
+          "aria-label",
+          `${getRacerLabel(index)} ${racer.name} 残り${racer.distance}メートル ${getSpeedText(racer.speed)}`
+        );
+
+        lane.appendChild(animal);
+        lanesEl.appendChild(lane);
+      });
+
+      updateAnimalPositions(simulationTime);
+    }
+
+    function renderCards() {
+      cardsEl.innerHTML = "";
+
+      racers.forEach((racer, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.id = `card-animal-${index}`;
+
+        if (selectedChoice === index) {
+          card.classList.add("selected");
+        }
+
+        if (raceStarted) {
+          card.classList.add("disabled");
+        }
+
+        const friendlyExtra = speedDisplayModeEl.value === "friendly"
+          ? `<span class="friendly-extra">つまり、1秒たつごとに${racer.speed}mずつゴールへ近づく</span>`
+          : "";
+
+        card.innerHTML = `
+          <div class="card-id"><span class="racer-badge">${getRacerLabel(index)}</span></div>
+          <div class="big-icon">${racer.icon}</div>
+          <div class="animal-name">${racer.name}</div>
+          <div class="card-detail">
+            残り距離：<span id="card-remaining-${index}">${formatRemainingDistance(getRemainingDistance(racer))}</span>m<br>
+            速さ：${getSpeedText(racer.speed)}
+            ${friendlyExtra}
+          </div>
+        `;
+
+        card.addEventListener("click", () => selectChoice(index));
+        cardsEl.appendChild(card);
+      });
+
+      if (tieModeEl.checked) {
+        const tieCard = document.createElement("div");
+        tieCard.className = "card tie-card";
+        tieCard.id = "card-tie";
+
+        if (selectedChoice === "tie") {
+          tieCard.classList.add("selected");
+        }
+
+        if (raceStarted) {
+          tieCard.classList.add("disabled");
+        }
+
+        tieCard.innerHTML = `
+          <div class="big-icon">🤝</div>
+          <div class="animal-name">同着</div>
+          <div class="card-detail">
+            2匹以上が同時に<br>
+            ゴールすると思う
+          </div>
+        `;
+
+        tieCard.addEventListener("click", () => selectChoice("tie"));
+        cardsEl.appendChild(tieCard);
+      }
+    }
+
+    function selectChoice(choice) {
+      if (raceStarted) return;
+
+      playSound("tap");
+
+      selectedChoice = choice;
+      startButton.disabled = false;
+      stepButton.disabled = false;
+
+      document.querySelectorAll(".card").forEach(card => {
+        card.classList.remove("selected");
+      });
+
+      if (choice === "tie") {
+        document.getElementById("card-tie").classList.add("selected");
+        resultEl.innerHTML = "同着を選びました。レース開始か「＋1秒進める」を押そう。";
+        return;
+      }
+
+      document.getElementById(`card-animal-${choice}`).classList.add("selected");
+
+      const racer = racers[choice];
+      resultEl.innerHTML = `
+        <span class="racer-badge">${getRacerLabel(choice)}</span>
+        ${racer.icon} ${racer.name} を選びました。レース開始か「＋1秒進める」を押そう。
+      `;
+    }
+
+    function lockCards() {
+      document.querySelectorAll(".card").forEach(card => {
+        card.classList.add("disabled");
+      });
+    }
+
+    function beginRun({ stepMode = false, countScore = true, isReplay = false, keepCurrentTime = false } = {}) {
+      stopAnimation();
+
+      raceStarted = true;
+      currentRaceFinished = false;
+      isPaused = false;
+      isStepMode = stepMode;
+      scoreThisRun = countScore;
+      replaying = isReplay;
+      if (!keepCurrentTime) simulationTime = 0;
+      lastFrameTime = null;
+
+      // 1秒観察中でも、途中から通常レースへ切り替えられる。
+      startButton.disabled = !stepMode;
+      stepButton.disabled = !stepMode;
+      pauseButton.disabled = stepMode;
+      replayButton.disabled = true;
+      pauseButton.textContent = "一時停止";
+
+      lockCards();
+      updateAnimalPositions(simulationTime);
+
+      if (stepMode) {
+        resultEl.innerHTML = `
+          1秒ずつ観察するモードです。<br>
+          <strong>＋1秒進める</strong>を押すたびに、各動物が「秒速ぶん」正確に進みます。<br>
+          途中から<strong>レース開始</strong>を押すと、今の位置からそのまま走り始めます。
+        `;
+      } else {
+        startButton.disabled = true;
+        resultEl.innerHTML = isReplay
+          ? "同じレースを再生中……！"
+          : simulationTime > 0
+            ? `観察した<strong>${simulationTime.toFixed(0)}秒後</strong>の位置からレース開始……！`
+            : "レース中……！";
+
+        pauseButton.disabled = false;
+        animationFrameId = requestAnimationFrame(animateRace);
+      }
+    }
+
+    function startRace() {
+      if (selectedChoice === null || currentRaceFinished) return;
+      playSound("tap");
+
+      // ＋1秒観察の途中なら、位置を巻き戻さずそこから通常レースへ続ける。
+      if (raceStarted && isStepMode) {
+        beginRun({
+          stepMode: false,
+          countScore: scoreThisRun,
+          isReplay: false,
+          keepCurrentTime: true
+        });
+        return;
+      }
+
+      if (raceStarted) return;
+      beginRun({
+        stepMode: false,
+        countScore: !sameRacePractice,
+        isReplay: false,
+        keepCurrentTime: false
+      });
+    }
+
+    function stepOneSecond() {
+      if (selectedChoice === null) return;
+      playSound("tap");
+
+      if (!raceStarted) {
+        beginRun({
+          stepMode: true,
+          countScore: !sameRacePractice,
+          isReplay: false,
+          keepCurrentTime: false
+        });
+      }
+
+      if (!isStepMode || currentRaceFinished) return;
+
+      simulationTime = Math.min(
+        simulationTime + 1,
+        Math.max(...racers.map(r => r.time))
+      );
+
+      updateAnimalPositions(simulationTime);
+
+      const maxTime = Math.max(...racers.map(r => r.time));
+
+      if (simulationTime >= maxTime - 0.0001) {
+        finishRun();
+      } else {
+        startButton.disabled = false;
+        resultEl.innerHTML = `
+          観察中：<strong>${simulationTime.toFixed(0)}秒</strong> 経過。<br>
+          1秒で進んだ距離は、それぞれの「秒速」と同じです。<br>
+          このまま<strong>＋1秒</strong>で観察するか、<strong>レース開始</strong>で今の位置から走らせられます。
+        `;
+      }
+    }
+
+    function animateRace(timestamp) {
+      if (currentRaceFinished || isPaused || isStepMode) return;
+
+      if (lastFrameTime === null) {
+        lastFrameTime = timestamp;
+      }
+
+      const deltaMs = timestamp - lastFrameTime;
+      lastFrameTime = timestamp;
+
+      const playbackRate = Number(raceSpeedEl.value);
+      simulationTime += (deltaMs / REAL_MS_PER_SIM_SECOND) * playbackRate;
+
+      const maxTime = Math.max(...racers.map(r => r.time));
+
+      if (simulationTime >= maxTime) {
+        simulationTime = maxTime;
+        updateAnimalPositions(simulationTime);
+        finishRun();
+        return;
+      }
+
+      updateAnimalPositions(simulationTime);
+      animationFrameId = requestAnimationFrame(animateRace);
+    }
+
+    function formatRemainingDistance(distance) {
+      if (Math.abs(distance - Math.round(distance)) < 0.001) {
+        return String(Math.round(distance));
+      }
+      return distance.toFixed(1);
+    }
+
+    function updateAnimalPositions(time) {
+      raceClockEl.textContent = `${time.toFixed(1)}秒`;
+
+      racers.forEach((racer, index) => {
+        const animalEl = document.getElementById(`animal-${index}`);
+        if (!animalEl) return;
+
+        const progress = Math.min(time / racer.time, 1);
+        const left = racer.startLeft + (FINISH_PERCENT - racer.startLeft) * progress;
+        animalEl.style.left = `${left}%`;
+
+        // 経過時間に合わせて、レーン上の「残り距離」も実際の位置と同期する。
+        const remainingDistance = getRemainingDistance(racer, time);
+        const remainingText = formatRemainingDistance(remainingDistance);
+
+        const infoEl = document.getElementById(`lane-info-${index}`);
+        if (infoEl) {
+          infoEl.innerHTML = `
+            <span class="racer-badge">${getRacerLabel(index)}</span>
+            ${racer.name}：残り${remainingText}m / ${getSpeedText(racer.speed)}
+          `;
+        }
+
+        // 下の選択カードの「残り距離」も同じ値へ同期する。
+        const cardRemainingEl = document.getElementById(`card-remaining-${index}`);
+        if (cardRemainingEl) {
+          cardRemainingEl.textContent = remainingText;
+        }
+
+        animalEl.setAttribute(
+          "aria-label",
+          `${getRacerLabel(index)} ${racer.name} 残り${remainingText}メートル ${getSpeedText(racer.speed)}`
+        );
+      });
+    }
+
+    function togglePause() {
+      if (!raceStarted || currentRaceFinished || isStepMode) return;
+
+      playSound("tap");
+
+      if (!isPaused) {
+        isPaused = true;
+        stopAnimation();
+        pauseButton.textContent = "再開";
+        resultEl.innerHTML = `
+          一時停止中。<br>
+          定規の目盛りを使って、今どこまで進んだか観察できます。
+        `;
+      } else {
+        isPaused = false;
+        pauseButton.textContent = "一時停止";
+        lastFrameTime = null;
+        resultEl.innerHTML = replaying ? "再生を再開しました。" : "レース再開……！";
+        animationFrameId = requestAnimationFrame(animateRace);
+      }
+    }
+
+    function replayRace() {
+      if (!currentRaceFinished) return;
+
+      playSound("tap");
+      stopAnimation();
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      // 問題データはそのまま。スタート前の状態だけに戻して再挑戦できるようにする。
+      selectedChoice = null;
+      raceStarted = false;
+      currentRaceFinished = false;
+      lastResultIsCorrect = null;
+      simulationTime = 0;
+      isPaused = false;
+      isStepMode = false;
+      scoreThisRun = false;
+      replaying = false;
+      sameRacePractice = true;
+      lastFrameTime = null;
+
+      raceClockEl.textContent = "0.0秒";
+      pauseButton.textContent = "一時停止";
+      startButton.disabled = true;
+      stepButton.disabled = true;
+      pauseButton.disabled = true;
+      replayButton.disabled = true;
+
+      renderRace();
+      renderCards();
+      updateAnimalPositions(0);
+
+      resultEl.innerHTML = `
+        <strong>同じレースを最初からもう一度できます。</strong><br>
+        勝つと思う動物を選び直してね。
+        <div class="small-note">この再挑戦は成績には加算されません。</div>
+      `;
+    }
+
+    function finishRun() {
+      stopAnimation();
+
+      if (currentRaceFinished) return;
+      currentRaceFinished = true;
+
+      const winners = getWinners();
+      const isTie = winners.length >= 2;
+
+      let isCorrect = false;
+
+      if (isTie) {
+        isCorrect = selectedChoice === "tie";
+      } else {
+        isCorrect = selectedChoice === winners[0].index;
+      }
+
+      lastResultIsCorrect = isCorrect;
+
+      // 再挑戦でも正解・不正解の効果音は鳴らす。成績だけは初回のみ加算する。
+      if (isCorrect) {
+        playSound("correct");
+      } else {
+        playSound("wrong");
+      }
+
+      if (scoreThisRun) {
+        updateStats(isCorrect);
+      }
+
+      startButton.disabled = true;
+      stepButton.disabled = true;
+      pauseButton.disabled = true;
+      pauseButton.textContent = "一時停止";
+      replayButton.disabled = false;
+
+      resultEl.innerHTML = buildResultHtml(isCorrect, replaying);
+
+      if (speechModeEl.checked) {
+        speak(getResultSpeechText());
+      }
+    }
+
+    function buildResultHtml(isCorrect, wasReplay = false) {
+      const winners = getWinners();
+      const isTie = winners.length >= 2;
+      const winnerText = winners.map(w => `${w.icon} ${w.name}`).join(" と ");
+
+      let html = "";
+
+      if (!wasReplay) {
+        html += isCorrect
+          ? `<strong>正解！</strong><br>`
+          : `<strong>不正解！</strong><br>`;
+      } else {
+        html += `<strong>同じレースをもう一度確認しました。</strong><br>`;
+      }
+
+      if (isTie) {
+        html += `結果は <strong>${winnerText} の同着</strong> でした。`;
+      } else {
+        html += `勝ったのは <strong>${winnerText}</strong> です。`;
+      }
+
+      html += makeGoalTimeText(assistModeEl.checked);
+
+      if (assistModeEl.checked && !isCorrect && !wasReplay) {
+        html += makeMistakeComparisonHtml();
+      }
+
+      if (assistModeEl.checked) {
+        html += makeHintText(isTie);
+      }
+
+      return html;
+    }
+
+    function makeGoalTimeText(showFormula) {
+      let formula = "ゴール時間\n";
+
+      racers.forEach((racer, index) => {
+        const label = getRacerLabel(index);
+
+        if (showFormula) {
+          formula += `${label} ${racer.icon} ${racer.name}：${racer.distance}m ÷ ${getSpeedFormulaText(racer.speed)} = ${formatTime(racer.time)}\n`;
+        } else {
+          formula += `${label} ${racer.icon} ${racer.name}：${formatTime(racer.time)}でゴール\n`;
+        }
+      });
+
+      formula += `\n到着時間が一番短い動物が勝ちです。`;
+
+      return `<div class="formula">${formula}</div>`;
+    }
+
+    function makeMistakeComparisonHtml() {
+      const winners = getWinners();
+
+      if (selectedChoice === "tie") {
+        const winner = winners[0];
+        return `
+          <div class="comparison">
+            今回は到着時間がそろっていません。<br>
+            一番短いのは ${winner.icon} ${winner.name} の <strong>${formatTime(winner.time)}</strong> でした。
+          </div>
+        `;
+      }
+
+      if (typeof selectedChoice !== "number") return "";
+
+      const selected = racers[selectedChoice];
+      const bestTime = Math.min(...racers.map(r => r.time));
+      const bestRacers = racers.filter(r => Math.abs(r.time - bestTime) < 0.001);
+      const bestText = bestRacers
+        .map(r => `${r.icon} ${r.name} ${formatTime(r.time)}`)
+        .join(" / ");
+
+      return `
+        <div class="comparison">
+          選んだ ${selected.icon} ${selected.name} は
+          <strong>${selected.distance} ÷ ${selected.speed} = ${formatTime(selected.time)}</strong>。<br>
+          一番短い到着時間は <strong>${bestText}</strong>。<br>
+          「距離」と「秒速」の片方だけでなく、割り算した結果を比べるのがポイントです。
+        </div>
+      `;
+    }
+
+    function makeHintText(isTie) {
+      if (selectedChoice === "tie" && !isTie) {
+        return `
+          <div class="hint">
+            今回は同着ではありませんでした。到着時間が一番短い動物を選ぶと正解です。
+          </div>
+        `;
+      }
+
+      if (isTie && selectedChoice !== "tie") {
+        return `
+          <div class="hint">
+            今回は2匹以上の到着時間が同じでした。同着問題では「同着」を選ぶ必要があります。
+          </div>
+        `;
+      }
+
+      if (typeof selectedChoice === "number") {
+        const selected = racers[selectedChoice];
+        const winners = getWinners();
+        const selectedIsWinner = winners.some(winner => winner.index === selected.index);
+        const minDistance = Math.min(...racers.map(r => r.distance));
+        const maxSpeed = Math.max(...racers.map(r => r.speed));
+        const selectedIsClosest = Math.abs(selected.distance - minDistance) < 0.001;
+        const selectedIsFastest = selected.speed === maxSpeed;
+
+        if (!selectedIsWinner && selectedIsClosest) {
+          return `
+            <div class="hint">
+              ゴールに一番近い動物を選んだようです。<br>
+              近くても、進む速さが遅いと到着には時間がかかります。
+            </div>
+          `;
+        }
+
+        if (!selectedIsWinner && selectedIsFastest) {
+          return `
+            <div class="hint">
+              秒速が一番大きい動物を選んだようです。<br>
+              速くても、残り距離が長いと到着には時間がかかります。
+            </div>
+          `;
+        }
+      }
+
+      return `
+        <div class="hint">
+          残り距離と秒速の両方を見て、「残り距離 ÷ 秒速」で到着時間を比べてみよう。
+        </div>
+      `;
+    }
+
+    function updateStats(isCorrect) {
+      stats.total += 1;
+
+      if (isCorrect) {
+        stats.correct += 1;
+        stats.streak += 1;
+        stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+      } else {
+        stats.streak = 0;
+      }
+
+      renderStats();
+    }
+
+    function renderStats() {
+      correctCountEl.textContent = stats.correct;
+      totalCountEl.textContent = stats.total;
+
+      const accuracy = stats.total === 0 ? 0 : Math.round((stats.correct / stats.total) * 100);
+      accuracyEl.textContent = `${accuracy}%`;
+      streakEl.textContent = stats.streak;
+    }
+
+    function resetStats() {
+      playSound("tap");
+
+      stats = {
+        correct: 0,
+        total: 0,
+        streak: 0,
+        bestStreak: 0
+      };
+
+      renderStats();
+      resultEl.innerHTML = "成績をリセットしました。次のレースに挑戦しよう。";
+    }
+
+    function applyDifficultyDefaults() {
+      const difficulty = difficultyEl.value;
+
+      if (difficulty === "easy") {
+        racerCountEl.value = "2";
+        divisibleModeEl.checked = true;
+        tieModeEl.checked = false;
+        twistModeEl.checked = true;
+      }
+
+      if (difficulty === "normal") {
+        racerCountEl.value = "3";
+        divisibleModeEl.checked = true;
+        tieModeEl.checked = true;
+        twistModeEl.checked = true;
+      }
+
+      if (difficulty === "hard") {
+        racerCountEl.value = "3";
+        divisibleModeEl.checked = false;
+        tieModeEl.checked = true;
+        twistModeEl.checked = true;
+      }
+
+      makeRace();
+    }
+
+    readButton.addEventListener("click", () => {
+      playSound("tap");
+      speak(getProblemSpeechText());
+    });
+
+    startButton.addEventListener("click", startRace);
+    stepButton.addEventListener("click", stepOneSecond);
+    pauseButton.addEventListener("click", togglePause);
+    replayButton.addEventListener("click", replayRace);
+
+    nextButton.addEventListener("click", () => {
+      playSound("tap");
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      makeRace();
+    });
+
+    resetButton.addEventListener("click", resetStats);
+
+    difficultyEl.addEventListener("change", () => {
+      playSound("tap");
+      applyDifficultyDefaults();
+    });
+
+    racerCountEl.addEventListener("change", () => {
+      playSound("tap");
+      makeRace();
+    });
+
+    divisibleModeEl.addEventListener("change", () => {
+      playSound("tap");
+      makeRace();
+    });
+
+    tieModeEl.addEventListener("change", () => {
+      playSound("tap");
+      makeRace();
+    });
+
+    twistModeEl.addEventListener("change", () => {
+      playSound("tap");
+      makeRace();
+    });
+
+    speedDisplayModeEl.addEventListener("change", () => {
+      playSound("tap");
+
+      if (raceStarted && !currentRaceFinished) {
+        resultEl.innerHTML = "レース中です。表示の切り替えは、レース終了後または次のレースで反映されます。";
+        return;
+      }
+
+      renderRace();
+      renderCards();
+
+      if (currentRaceFinished && lastResultIsCorrect !== null) {
+        resultEl.innerHTML = buildResultHtml(lastResultIsCorrect, false);
+        return;
+      }
+
+      resultEl.innerHTML = getSpeedModeMessage();
+    });
+
+    raceSpeedEl.addEventListener("change", () => {
+      playSound("tap");
+
+      if (raceStarted && !currentRaceFinished && !isStepMode) {
+        resultEl.innerHTML = `再生速度を${raceSpeedEl.options[raceSpeedEl.selectedIndex].text}に変更しました。`;
+      }
+    });
+
+    assistModeEl.addEventListener("change", () => {
+      playSound("tap");
+
+      if (currentRaceFinished && lastResultIsCorrect !== null) {
+        resultEl.innerHTML = buildResultHtml(lastResultIsCorrect, replaying);
+        return;
+      }
+
+      if (!raceStarted) {
+        resultEl.innerHTML = assistModeEl.checked
+          ? "補助表示あり：レース後に計算式と、間違えた理由のヒントを表示します。"
+          : "補助表示なし：まずは直感と暗算で挑戦！ ゴール時間だけはレース後に表示されます。";
+      }
+    });
+
+    soundModeEl.addEventListener("change", () => {
+      if (soundModeEl.checked) {
+        resultEl.innerHTML = "効果音をオンにしました。";
+        playSound("tap");
+      } else {
+        resultEl.innerHTML = "効果音をオフにしました。";
+      }
+    });
+
+    speechModeEl.addEventListener("change", () => {
+      if (!speechModeEl.checked && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      resultEl.innerHTML = speechModeEl.checked
+        ? "音声読み上げをオンにしました。「問題を読み上げ」ボタンで聞けます。"
+        : "音声読み上げをオフにしました。";
+    });
+
+    setupSounds();
+    renderStats();
+    applyDifficultyDefaults();
+  </script>
+</body>
+</html>
